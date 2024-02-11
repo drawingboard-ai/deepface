@@ -1,6 +1,11 @@
 from flask import Blueprint, request
 from deepface.api.src.modules.core import service
 from deepface.commons.logger import Logger
+import base64
+from tempfile import NamedTemporaryFile
+import os
+import logging
+
 
 logger = Logger(module="api/src/routes.py")
 
@@ -77,31 +82,33 @@ def verify():
 
     return verification
 
-
 @blueprint.route("/analyze", methods=["POST"])
 def analyze():
     input_args = request.get_json()
 
     if input_args is None:
-        return {"message": "empty input set passed"}
+        return {"message": "Empty input set passed"}, 400
 
-    img_path = input_args.get("img") or input_args.get("img_path")
-    if img_path is None:
-        return {"message": "you must pass img_path input"}
+    # Ensure the request contains a base64 image string
+    base64_image = input_args.get("base64_image")
+    if not base64_image:
+        return {"message": "You must pass base64_image"}, 400
 
+    # Additional parameters
     detector_backend = input_args.get("detector_backend", "opencv")
     enforce_detection = input_args.get("enforce_detection", True)
     align = input_args.get("align", True)
     actions = input_args.get("actions", ["age", "gender", "emotion", "race"])
 
-    demographies = service.analyze(
-        img_path=img_path,
+    # Call the analyze function from the service module
+    result = service.analyze(
+        base64_image=base64_image,
         actions=actions,
         detector_backend=detector_backend,
         enforce_detection=enforce_detection,
         align=align,
     )
 
-    logger.debug(demographies)
+    logger.debug(result)
 
-    return demographies
+    return result
